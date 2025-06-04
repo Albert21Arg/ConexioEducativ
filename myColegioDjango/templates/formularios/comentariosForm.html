@@ -1,0 +1,7 @@
+<h1>Nuevo Comentario para {{ blog.titulo }}</h1>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Publicar</button>
+</form>
+<a href="{% url 'comentariosPorBlog' blog.id %}">Volver a los comentarios</a>

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block head %}
+{% include 'head.html' %}
+<title>Perfil {{ usuario.nombre }}</title>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center mt-5">
+    <div class="col-md-6 col-lg-4 mt-5">
+        <div class="card shadow-lg border-success">
+            <div class="card-header text-white bg-success text-center">
+                <h3 class="mb-0">Perfil de {{ usuario.nombre }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-5" style="width: 220px; height: 220px; margin: 0 auto; overflow: hidden; ">
+                    {% if usuario.foto %}
+                    <img src="{{ usuario.foto.url }}" alt="Foto de perfil"
+                        style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    {% else %}
+                    <img src="{% static 'img/Screenshot_1.jpg' %}" alt="Sin foto"
+                        style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    {% endif %}
+                </div>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between border-secondary">
+                    <strong>Nombre:</strong> <span>{{ usuario.nombre }} {{ usuario.apellido }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between border-secondary">
+                    <strong>Correo:</strong> <span>{{ usuario.correo }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between border-secondary">
+                    <strong>Rol:</strong> <span>{{ usuario.get_rol_display }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between border-secondary">
+                    <strong>Fecha de creación:</strong> <span>{{ usuario.fechaCreacion }}</span>
+                </li>
+            </ul>
+        </div>
+        <div class="d-flex justify-content-between mt-3">
+            <a href="{% url 'usuariosListar' %}" class="btn btn-outline-secondary">Atras</a>
+            <a href="{% url 'modificarUsuario' usuario.id %}" class="btn btn-success">Editar</a>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

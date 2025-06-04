@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block head %}
+    {% include 'head.html' %}
+    
+    <title>token</title>
+{% endblock %}
+
+{% block navbar %}
+    {% include 'navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center mt-4" style="min-height: 80vh;">
+    <div class="card p-4 shadow border-success" style="width: 100%; max-width: 400px;">
+        <form action="" method="post" class="card m-auto mt-3 col-6 p-3">
+            <h3>Recuperar contraseña:</h3>
+            {% csrf_token %}
+            <label>Digite el token de seguridad enviado a su correo:</label>
+            <input type="text" name="token" class="form-control mt-3 mb-5" required="" style="width:5em;">
+            <input type="hidden" name="correo" value="{{ correo }}">
+            <label>Nuevo Password:</label>
+            <input type="password" name="password" class="form-control"><br>
+            <label>Repita Password:</label>
+            <input type="password" name="password2" class="form-control"><br>
+
+            <button type="submit" class="btn btn-primary mt-3">Enviar</button>
+            <a href="{% url 'login' %}" class="mt-3">Ir al login</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

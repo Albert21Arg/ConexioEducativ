@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% block head %}
+    {% include 'head.html' %}
+    <title>Base</title>
+    
+    {% endblock %}
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+    
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success fixed-top " >
+        
+        {% block nav %}
+        
+        {% if request.session.logueado.rol == "EST" or  request.session.logueado.rol == "ADM" or  request.session.logueado.rol == "PROF" %}
+        {% include 'profesores/navbarProfesor.html' %}
+        {% else %}                                
+        {% include 'navbar.html' %}       
+        {% endif %}
+        {% endblock %}
+    </nav>
+     
+    <main class="flex-grow-1 text-black d-flex flex-column mt-4 ">        
+        {% include 'mensajes.html' %}  
+        {% block content %}
+        
+        {% endblock %}
+    </main>
+
+    <footer class="bg-success text-black text-center py-1">
+        {% block footer %}        
+        {% include 'footer.html' %}
+        {% endblock %}
+    </footer>
+
+    {% block scripts %}
+    {% include 'scripts.html' %}
+    {% endblock %}
+    
+</body>
+
+</html>

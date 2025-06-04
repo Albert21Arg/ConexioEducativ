@@ -1,0 +1,7 @@
+main {
+    min-height: calc(100vh - 112px); /* Ajusta según el alto de tu navbar + footer */
+}
+
+.centered{
+    text-align: center !important;
+}

@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block head %}
+{% include 'head.html' %}
+
+
+<title>Lista de Estudiantes</title>
+    
+{% endblock %}
+
+{% block content %}
+<main class="d-flex justify-content-center align-items-center">
+    <section class="w-100">
+        <div class="container">
+            <div class="row justify-content-center align-items-center">
+                <div class="col-12 col-md-9 col-lg-7 col-xl-12">
+                    <div class="table-responsive">
+                        <table id="datatableEstudiantes" class="table table-striped table-bordered  text-center align-middle">
+                            <H1 class="text-center"> Estudiantes</H1>
+                            <thead class="table-success">
+                                <tr>
+                                    <th class="centered"></th>
+                                    <th class="centered col-8">Nombre</th>
+                                    <th class="centered col-4">Correo</th>
+                                    <th class="centered ">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bodyListaUsuarios">
+
+                            </tbody>
+                        </table>
+                        <div class="d-flex justify-content-between mt-3">
+                            <a href="{% url 'index' %}" class="btn btn-outline-secondary px-4">Inicio</a>
+                            
+                          </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+{% endblock %}
+
+
+{% block scripts %}
+{% include 'scripts.html' %}
+<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+<script src="https://cdn.datatables.net/2.3.0/js/dataTables.js"></script>
+<script src="https://cdn.datatables.net/2.3.0/js/dataTables.bootstrap5.js"></script>
+<script src="{% static 'js/estudiantes.js' %}"></script>
+
+{% endblock %}

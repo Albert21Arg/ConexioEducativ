@@ -1,0 +1,15 @@
+<h1>Comentarios para: {{ blog.titulo }}</h1>
+
+{% if comentarios %}
+  <ul>
+    {% for comentario in comentarios %}
+      <li>
+        <strong>{{ comentario.autor }}</strong>: {{ comentario.contenido }}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No hay comentarios aún.</p>
+{% endif %}
+
+<a href="{% url 'comentarioCrear' blog.id %}">Agregar comentario</a>

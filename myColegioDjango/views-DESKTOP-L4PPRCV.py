@@ -1,0 +1,588 @@
+# Create your models here.
+from django.shortcuts import render, redirect, get_object_or_404
+from .utils import *
+from .models import *
+from .forms import *
+from django.core.validators import validate_email
+from django.db import IntegrityError
+from django.contrib import messages
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.hashers import make_password
+from django.http.response import JsonResponse
+import re
+from django.db.models import F, Value, CharField
+from django.db.models.functions import Concat
+
+def login(request):
+    if request.method == "POST":
+        user = request.POST.get("correo")
+        passwd = request.POST.get("password")
+        try:
+            q = Usuario.objects.get(correo = user)
+            if verify_password(passwd, q.password):
+                messages.success(request, "Bienvenido!")
+                # creación de la sesión...
+                request.session["logueado"] = {
+                    "id" : q.id,
+                    "rol": q.rol,
+                    "nombre_rol": q.get_rol_display(),
+                    "nombre": f"{q.nombre} {q.apellido}"
+                }
+                return redirect("index")
+            else:
+                raise Exception()
+        except Usuario.DoesNotExist:
+            messages.warning(request, "Usuario o contraseña no válidos")
+            request.session["logueado"] = None
+        except Exception as e:
+            messages.error(request, f"Error: {e}")
+            request.session["logueado"] = None
+        return redirect("login")
+    else:
+        verificar = request.session.get("logueado", False)
+        if verificar:
+            return redirect("index")
+        else:
+            return render(request, "fijos/login.html")
+
+def logout(request):
+    try:
+        del request.session["logueado"]
+        messages.success(request, "Sesión cerrada correctamente!")
+        return redirect("index")
+    except:
+        messages.error(request, "Ocurrió un error, intente de nuevo.")
+        return redirect("principal")
+    
+def principal(request):
+    
+        return render(request, "fijos/principal.html")
+    
+def perfilUsuario(request, id):
+    if request.session.get("logueado", {}).get("rol") == "ADM":
+        usuario = get_object_or_404(Usuario, id=id)
+        return render(request, "formularios/usuarioPerfil.html", {"usuario": usuario})
+    else:
+        messages.warning(request, "No tienes permiso para ver este perfil.")
+        return redirect("index")
+    
+def index(request):
+    verificar = request.session.get("logueado", False)
+    if verificar:
+        return render(request, "fijos/index.html")
+    else:
+        
+        return redirect("principal")
+    
+def perfil(request):
+    verificar = request.session.get("logueado", False)
+
+    if not verificar or "id" not in verificar:
+        return redirect("login")  # redirige al login si no hay sesión
+
+    try:
+        q = Usuario.objects.get(id=verificar["id"])
+        contexto = {"data": q}
+        return render(request, "fijos/perfil.html", contexto)
+    except Usuario.DoesNotExist:
+        return redirect("login")
+    
+def registrarUsuarios(request):
+    if request.session.get("logueado") :
+        if request.method == "POST":
+            nombre = request.POST.get("nombre")
+            apellido = request.POST.get("apellido")
+            correo = request.POST.get("correo")
+            password = request.POST.get("password")
+            password2 = request.POST.get("password2")
+            rol = "EST"
+            foto = ""
+
+            valid = True 
+
+            # Validar email
+            try:
+                validate_email(correo)
+            except ValidationError:
+                messages.error(request, "El correo ingresado no es válido.")
+                valid = False
+
+            letras_regex = re.compile(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ]+$')
+
+            if not letras_regex.match(nombre):
+                messages.error(request, "El nombre no debe contener números")
+                valid = False
+
+            if not letras_regex.match(apellido):
+                messages.error(request, "El apellido solo puede contener letras y espacios.")
+                valid = False
+            
+            dominios = correo.split('@')[-1]
+            dominiosValidos = ['hotmail.com','gmail.com', 'outlook.com', '.edu.co', 'outlook.es']  
+
+            if dominios not in dominiosValidos:
+                messages.error(request, f"Solo se permiten correos de dominios autorizados.{dominiosValidos}")
+                valid = False
+
+            if password != password2:
+                messages.warning(request, "Las contraseñas no coinciden.")
+                valid = False
+            elif len(password) < 6:
+                messages.warning(request, "La contraseña debe tener al menos 6 caracteres.")
+                valid = False
+
+            if not valid:
+                return render(request, "fijos/registrarUsuarios.html", {
+                    "nombre": nombre,
+                    "apellido": apellido,
+                    "correo": correo,
+        }) 
+
+            try:
+                q = Usuario(
+                    nombre=nombre,
+                    apellido=apellido,
+                    correo=correo,
+                    rol=rol,
+                    foto=foto,
+                    password=hash_password(password)
+                )
+                q.save()
+                messages.success(request, "Usuario creado correctamente!")
+
+                try:
+                    html_message = f'''
+                    <strong>{q.nombre}</strong>, acabas de crear una cuenta en nuestra plataforma Conexion Educativa.<br><br>
+                    Tus datos registrados son:<br>
+                    <strong>Correo:</strong> {q.correo}<br><br>
+                    Si deseas iniciar sesión, haz clic en el siguiente enlace:<br>
+                    <a href="http://127.0.0.1:8000/"> Conexión Educativa </a><br><br>'''
+
+                    send_mail(
+                        'Registro de Usuario',
+                        "",
+                        settings.EMAIL_HOST_USER,
+                        [q.correo],
+                        fail_silently=False,
+                        html_message=html_message
+                    )
+                    messages.success(request, "Correo enviado !!")
+                except Exception as error:
+                    messages.error(request, f"No se pudo enviar el correo: {error}")
+
+                return redirect("login")
+
+            except IntegrityError:
+                messages.error(request, f"Error: {correo} El correo ya está en uso.")
+                return redirect("registrarUsuarios")
+            except Exception as e:
+                messages.error(request, f"Error inesperado: {e}")
+                return redirect("registrarUsuarios")
+
+        else:
+            return render(request, "fijos/registrarUsuarios.html")
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("login")
+
+def modificarUsuario(request, id):
+    if request.session.get("logueado", {}).get("rol") == "ADM":
+        usuario = get_object_or_404(Usuario, id=id)
+
+        if request.method == "POST":
+            form = UsuarioForm(request.POST, request.FILES, instance=usuario)
+            password = request.POST.get("password")
+
+            if form.is_valid():
+                if password and len(password) < 6:
+                    messages.error(request, "La contraseña debe contener mínimo 6 caracteres.")
+                    return render(request, "fijos/modificarUsuario.html", {"form": form, "usuario": usuario})
+
+                usuario = form.save(commit=False)
+
+                if password:
+                    usuario.password = make_password(password)
+
+                usuario.save()
+                messages.success(request, "Usuario modificado correctamente.")
+                return redirect('perfil' if request.session["logueado"]["id"] == id else 'usuariosListar')
+            else:
+                print("Errores del formulario:", form.errors)
+                messages.error(request, "Por favor verifica los datos ingresados.")
+        else:
+            form = UsuarioForm(instance=usuario)
+
+        return render(request, "fijos/modificarUsuario.html", {"form": form, "usuario": usuario})
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+
+    
+def cambioPassword(request):
+    verificar = request.session.get("logueado", False)
+    
+    if verificar:
+        if request.method == "POST":
+            vieja = request.POST.get("vieja")
+            nueva = request.POST.get("nueva")
+            nueva_r = request.POST.get("nueva_repiti")
+            # capturo usuario logueado ------------------------
+            usuario = request.session.get("logueado", False)
+            q = Usuario.objects.get(pk = usuario["id"])
+            if verify_password(vieja, q.password):
+                if nueva == nueva_r:
+                    # ecriptar contraseña
+                    # from .utils import *
+                    q.password = hash_password(nueva)
+                    q.save()
+                    messages.success(request, "Contraseña cambiada con éxito")
+                else:
+                    messages.info(request, "Las nuevas contraseñas no coinciden...")
+            else:
+                messages.warning(request, "Contraseña actual no coincide...")
+
+            return redirect("cambioPassword")
+        else:
+            return render(request, "fijos/cambioPassword.html")
+    
+def recuperarPassword(request):
+    if request.method == "POST":
+        correo = request.POST.get("correo")
+        try:
+            q = Usuario.objects.get(correo = correo)
+            from random import randint
+            token = randint(100000, 999999)
+            q.token_recuperar_clave = token
+            chorrera = hash_password("chorrera")
+            q.save()
+            try:
+                html_message = f'<strong>{q.nombre}</strong>, Desde Conexion Educativa hemos recibido una solicitud de cambio de contraseña. Por favor accede al siguiente link e ingresa el token de seguridad:<br><br>TOKEN: {token}<br>Ve al siguiente link: <a href="http://127.0.0.1:8000/verificar_token_recuperar_password/?chorrera={chorrera}&email=True&correo={q.correo}">Conexion Educativa</a>'
+
+                send_mail('Registro de Usuario en Educalab', "", settings.EMAIL_HOST_USER,
+                          [f'{q.correo}'],
+                          fail_silently=False,
+                          html_message=html_message
+                          )
+                messages.success(request, "Correo enviado !!")
+                return redirect("recuperarPassword")
+            except Exception as error:
+                messages.error(request, f"No se pudo enviar el correo: {error}")
+        except Usuario.DoesNotExist:
+            messages.info(request, "Si el correo está registrado, recibirás un mensaje.")
+            return redirect("recuperarPassword")
+    else:
+        return render(request, "fijos/recuperarPassword.html")
+    
+def token(request):
+    if request.method == "POST":
+        correo = request.POST.get("correo")
+        token = request.POST.get("token")
+        password = request.POST.get("password")
+        password2 = request.POST.get("password2")
+
+        q = Usuario.objects.get(correo=correo)
+        if q.token_recuperar_clave == token:
+            if password == password2:
+                q.token_recuperar_clave = ""
+                q.password = hash_password(password)
+                q.save()
+                messages.success(request, "Contraseña recuperada correctamente!")
+                return redirect("login")
+            else:
+                messages.error(request, "Las Contraseñas no coinciden...")
+        else:
+            messages.error(request, f"Token inválido")
+
+        return redirect("verificar_token_recuperar_password")
+    else:
+        correo = request.GET.get("correo")
+        contexto={
+            "correo": correo
+        }
+        return render(request, "fijos/verificar_token_recuperar_password.html", contexto)
+
+def editarFotoPerfil(request):
+    verificar = request.session.get("logueado", False)
+    
+    if not verificar:
+        return redirect('login')
+    else:
+        usuario_id = verificar.get("id")
+        usuario = get_object_or_404(Usuario, id=usuario_id)
+
+        if request.method == "POST":
+            form = FotoPerfilForm(request.POST, request.FILES, instance=usuario)
+            if form.is_valid():
+                form.save()
+                return redirect('perfil')
+        else:
+            form = FotoPerfilForm(instance=usuario)
+
+        return render(request, 'fijos/editarFotoPerfil.html', {'form': form})
+
+def usuariosListar(request):
+    if request.session.get("logueado", {}).get("rol") == "ADM" :
+        usuarios = Usuario.objects.all()
+        return render(request, 'formularios/usuariosListar.html', {'usuarios': usuarios})
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+
+def usuariosListar1(request):
+    if request.session.get("logueado", {}).get("rol") == "ADM" :
+        usuarios = list(Usuario.objects.values('id','nombre','apellido','rol','correo'))
+        data = {'usuarios': usuarios}
+        return JsonResponse(data)
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+
+def usuariosEliminar(request, id):
+    if request.session.get("logueado", {}).get("rol") == "ADM":
+        usuario = get_object_or_404(Usuario, id=id)
+        if request.method == 'POST':
+            usuario.delete()
+            messages.success(request, "Usuario eliminado correctamente.")
+            return redirect('usuariosListar')  # Usa el nombre de la URL, no una plantilla directamente
+        else:
+            # Mostrar confirmación antes de eliminar
+            return render(request, 'fijos/usuariosEliminarConfirmar.html', {'usuario': usuario})
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+
+#Grados
+def gradosCrear(request):
+    if request.session.get("logueado") or request.session.get("logueado", {}).get("rol") == "ADM" :
+        if request.method == 'POST':
+            form = GradosForm(request.POST)
+            if form.is_valid():
+                form.save()
+                return redirect('gradosListar')
+        else:
+            form = GradosForm()
+        return render(request, 'formularios/gruposCrear.html', {'form': form})
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+
+def gradosActualizar(request, grupo_id):
+    if request.session.get("logueado", {}).get("rol") == "ADM" :
+        grupo = get_object_or_404(Grados, id=grupo_id)
+        if request.method == 'POST':
+            form = GradosForm(request.POST, instance=grupo)
+            if form.is_valid():
+                form.save()
+                return redirect('gradosListar')
+        else:
+            form = GradosForm(instance=grupo)
+        return render(request, 'formularios/gruposActualizar.html', {'form': form, 'grupo': grupo})
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+
+def gradosEliminar(request, grupo_id):
+    if request.session.get("logueado", {}).get("rol") == "ADM" :
+        grupo = get_object_or_404(Grados, id=grupo_id)
+        if request.method == 'POST':
+            grupo.delete()
+            return redirect('gradosListar')
+        return render(request, 'formularios/gruposEliminar.html', {'grupo': grupo})
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+    
+def gradosListar(request):
+    if request.session.get("logueado", {}).get("rol") == "ADM" or "PROF" :
+        grupos = Grados.objects.all()
+        return render(request, 'formularios/gruposListar.html', {'grupos': grupos})
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+   
+def gradosListar1(request):
+    if request.session.get("logueado", {}).get("rol") == "ADM"  or "PROF":
+        grados = list(Grados.objects.values('id','nombre','descripcion'))
+        data = {'grados': grados}
+        return JsonResponse(data)
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index") 
+
+#Asignaturas
+def asignaturasListar(request):
+    if request.session.get("logueado", {}).get("rol") == "ADM" or "PROF" :
+        asignaturas = Asignatura.objects.all().order_by('-fechaCreacion')
+        return render(request, 'formularios/asignaturasListar.html', {'asignaturas': asignaturas})
+
+def asignaturasListar1(request):
+    if request.session.get("logueado", {}).get("rol") == "ADM" :
+        asignaturas = Asignatura.objects.annotate(profesorNombre=Concat(F('profesor__usuario__nombre'),Value(' '),F('profesor__usuario__apellido'),output_field=CharField())).values('id', 'nombre', 'descripcion', 'profesorNombre')
+
+        data = {'asignaturas': list(asignaturas)}
+        return JsonResponse(data)
+
+def asignaturasCrear(request):
+    if request.session.get("logueado", {}).get("rol") == "ADM":
+        if request.method == 'POST':
+            form = AsignaturaForm(request.POST)
+            if form.is_valid():
+                form.save()
+                return redirect('asignaturasListar')
+        else:
+            form = AsignaturaForm()
+        return render(request, 'formularios/asignaturasCrear.html', {'form': form, 'accion': 'Crear'})
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+    
+def asignaturasActualizar(request, id):
+    if request.session.get("logueado", {}).get("rol") == "ADM" :
+        asignatura = get_object_or_404(Asignatura, id=id)
+        if request.method == 'POST':
+            form = AsignaturaForm(request.POST, instance=asignatura)
+            if form.is_valid():
+                form.save()
+                return redirect('asignaturasListar')
+        else:
+            form = AsignaturaForm(instance=asignatura)
+        return render(request, 'formularios/asignaturasActualizar.html', {'form': form, 'accion': 'Actualizar'})
+
+def asignaturasEliminar(request, id):
+    if request.session.get("logueado", {}).get("rol") == "ADM" :
+        asignatura = get_object_or_404(Asignatura, id=id)
+        if request.method == 'POST':
+            asignatura.delete()
+            return redirect('asignaturasListar')
+        return render(request, 'formularios/asignaturasEliminar.html', {'asignatura': asignatura})
+
+#Estudiantes
+def estudiantesListar(request):
+    if request.session.get("logueado", {}).get("rol") == "ADM" or "PROF" :
+        estudiantes = Estudiante.objects.all()
+        return render(request, 'formularios/estudiantesListar.html', {'estudiantes': estudiantes})
+
+def usuariosListar2(request):
+    if request.session.get("logueado", {}).get("rol") == "ADM" or "PROF" :
+        usuarios = list(Usuario.objects.filter(rol="EST").values('nombre','apellido','correo'))
+        data = {'usuarios': usuarios}
+        return JsonResponse(data)
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+
+#Actividades
+def actividadCrear(request, asignatura_id):
+    if request.session.get("logueado", {}).get("rol") in ["ADM", "PROF"]:
+        asignatura = get_object_or_404(Asignatura, id=asignatura_id)
+        
+        if request.method == "POST":
+            form = ActividadForm(request.POST)
+            if form.is_valid():
+                actividad = form.save(commit=False)
+                actividad.asignatura = asignatura  # Asignar la relación manualmente
+                actividad.save()
+                return redirect('asignaturasListar')  # Puedes redirigir a la lista o al detalle
+        else:
+            form = ActividadForm()
+
+        return render(request, 'formularios/actividadCrear.html', {
+            'form': form,
+            'asignatura': asignatura,
+        })
+
+def actividadListar(request):
+    if request.session.get("logueado"):
+        actividades = Actividad.objects.all() 
+        return render(request, 'formularios/actividadListar.html', {'actividades': actividades})
+
+def actividadListar1(request):
+    if request.session.get("logueado", {}).get("rol") == "ADM" :
+        actividad = list(Actividad.objects.values())
+        data = {'actividad': actividad}
+        return JsonResponse(data)
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index") 
+
+def actividadActualizar(request, actividad_id):
+    if request.session.get("logueado", {}).get("rol") == "ADM" or "PROF" :
+        actividad = get_object_or_404(Actividad, id=actividad_id)
+        if request.method == "POST":
+            form = ActividadForm(request.POST, instance=actividad)
+            if form.is_valid():
+                form.save()
+                return redirect('actividadListar')
+        else:
+            form = ActividadForm(instance=actividad)
+        return render(request, 'formularios/actividadActualizar.html', {'form': form})
+
+def actividadEliminar(request, actividad_id):
+    if request.session.get("logueado", {}).get("rol")  in ["ADM", "PROF"]:
+        actividad = get_object_or_404(Actividad, id=actividad_id)
+        if request.method == "POST":
+            actividad.delete()
+            return redirect('actividadListar')
+        return render(request, 'formularios/actividadEliminar.html', {'actividad': actividad})
+
+def actividadesPorAsignatura(request, asignatura_id):
+    
+    asignatura = get_object_or_404(Asignatura, id=asignatura_id)
+    actividades = asignatura.actividades.all()
+    return render(request, 'formularios/actividadesPorAsignatura.html', {
+        'asignatura': asignatura,
+        'actividades': actividades
+    })
+   
+#Blogs
+def blogsCrear(request):
+    if request.session.get("logueado", {}).get("rol")  in ["ADM", "PROF"]:
+        if request.method == 'POST':
+            form = BlogForm(request.POST)
+            if form.is_valid():
+                form.save()
+                return redirect('blogsListar')
+        else:
+            form = BlogForm()
+        return render(request, 'formularios/blogsCrear.html', {'form': form})
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+
+def blogsListar(request):
+    if request.session.get("logueado"):
+        blogs = Blog.objects.all()
+        return render(request, 'formularios/blogsListar.html', {'blogs': blogs})
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+    
+def blogsListar1(request):
+    if request.session.get("logueado", {}).get("rol") == "ADM" :
+        blogs = list(Blog.objects.values())
+        data = {'blogs': blogs}
+        return JsonResponse(data)
+    else:
+        messages.warning(request, "No tienes permiso para modificar este usuario.")
+        return redirect("index")
+
+def blogsActualizar(request, blog_id):
+    if request.session.get("logueado", {}).get("rol") == "ADM" or request.session.get("logueado", {}).get("rol") == "PROF":
+        blog = get_object_or_404(Blog, id=blog_id)
+        if request.method == 'POST':
+            form = BlogForm(request.POST, instance=blog)
+            if form.is_valid():
+                form.save()
+                return redirect('blogsListar')
+        else:
+            form = BlogForm(instance=blog)
+        return render(request, 'formularios/blogsActualizar.html', {'form': form, 'blog': blog})
+
+def blogsEliminar(request, blog_id):
+    if request.session.get("logueado", {}).get("rol") == "ADM" or request.session.get("logueado", {}).get("rol") == "PROF":
+        blog = get_object_or_404(Blog, id=blog_id)
+        if request.method == 'POST':
+            blog.delete()
+            return redirect('blogsListar')
+        return render(request, 'formularios/blogsEliminar.html', {'blog': blog})

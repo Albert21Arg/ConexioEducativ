@@ -1,0 +1,7 @@
+<h1>Eliminar Comentario</h1>
+<p>¿Estás seguro de eliminar el comentario de "{{ comentario.autor }}"?</p>
+<form method="post">
+  {% csrf_token %}
+  <button type="submit">Sí, eliminar</button>
+  <a href="{% url 'comentarioListar' %}">Cancelar</a>
+</form>

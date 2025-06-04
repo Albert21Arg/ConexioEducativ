@@ -1,0 +1,9 @@
+<h1>Estudiantes del Grado {{ grado.nombre }}</h1>
+
+<ul>
+    {% for estudiante in estudiantes %}
+        <li>{{ estudiante.usuario.nombre }} {{ estudiante.usuario.apellido }}</li>
+    {% empty %}
+        <li>No hay estudiantes en este grado.</li>
+    {% endfor %}
+</ul>

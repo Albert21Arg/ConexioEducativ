@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block head %}
+{% include 'head.html' %}
+<title>Editar Usuario</title>
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block content %}
+{% if request.session.logueado.rol == "ADM" %}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow rounded-4 border-0">
+                <div class="card-body p-5">
+                    <h2 class="card-title text-center mb-4 fw-bold text-success">
+                        <i class="bi bi-people-fill"></i> Crear Grupo
+                    </h2>
+
+                    <form method="post" novalidate enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <label for="{{ form.nombre.id_for_label }}" class="form-label">Nombre del Grupo</label>
+                            {{ form.nombre }}
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.descripcion.id_for_label }}" class="form-label">Descripción</label>
+                            {{ form.descripcion }}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'listaGrupos' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-plus-circle"></i> Crear Grupo
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+{% include 'sesion.html' %}
+{% endif %}
+
+{% endblock %}
