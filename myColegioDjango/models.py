@@ -49,12 +49,13 @@ class Grados(models.Model):
     
     nombre = models.CharField(max_length=20, unique=True)
     profesor = models.ForeignKey(Profesor, on_delete=models.SET_NULL, null=True, blank=True, related_name="grados")
+    estudiante = models.ManyToManyField(Estudiante, blank=True, related_name="grados")
     descripcion = models.TextField(blank=True, null=True)
     fechaCreacion = models.DateTimeField(auto_now_add=True)
     
     
     def __str__(self):
-        return self.nombre
+        return self.nombre 
     
     @property
     def fechaSoloFecha(self):

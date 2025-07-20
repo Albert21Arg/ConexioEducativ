@@ -46,12 +46,12 @@ class UsuarioSListarForm(forms.Form):
 class GradosForm(forms.ModelForm):
     class Meta:
         model = Grados
-        fields = ['nombre', 'descripcion']
+        fields = ['nombre', 'descripcion','profesor','estudiante']
         
 class AsignaturaForm(forms.ModelForm):
     class Meta:
         model = Asignatura
-        fields = ['nombre', 'descripcion','profesor']
+        fields = ['nombre', 'descripcion','profesor','grados']
         
 class ActividadForm(forms.ModelForm):
     class Meta:

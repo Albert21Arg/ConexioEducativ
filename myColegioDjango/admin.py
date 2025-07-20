@@ -57,7 +57,11 @@ class EstudianteAdmin(admin.ModelAdmin):
 
 @admin.register(Grados)
 class GradosAdmin(admin.ModelAdmin):
-    list_display = ('id' ,'nombre', 'descripcion','fechaCreacion')
+    list_display = ('id', 'nombre', 'descripcion', 'listar_estudiantes', 'fechaCreacion')
+
+    def listar_estudiantes(self, obj):
+        return ", ".join([str(est) for est in obj.estudiante.all()])
+    listar_estudiantes.short_description = 'Estudiantes'
 
 @admin.register(Asignatura)
 class AsignaturaAdmin(admin.ModelAdmin):

@@ -402,13 +402,32 @@ def gradosListar(request):
         return redirect("index")
    
 def gradosListar1(request):
-    if request.session.get("logueado", {}).get("rol") == "ADM"  or "PROF":
-        grados = list(Grados.objects.values('id','nombre','descripcion'))
-        data = {'grados': grados}
-        return JsonResponse(data)
+    if request.session.get("logueado", {}).get("rol") in ["ADM", "PROF"]:
+        data = []
+
+        for grupo in Grados.objects.all():
+            profesor_nombre = "Sin asignar"
+            if grupo.profesor and grupo.profesor.usuario:
+                profesor_nombre = f"{grupo.profesor.usuario.nombre} {grupo.profesor.usuario.apellido}"
+
+            data.append({
+                'id': grupo.id,
+                'nombre': grupo.nombre,
+                'descripcion': grupo.descripcion,
+                'profesorNombre': profesor_nombre,
+            })
+
+        # ← Aquí se agrega el rol actual para que el frontend lo use
+        return JsonResponse({
+            'grados': data,
+            'usuario': {
+                'rol': request.session.get("logueado", {}).get("rol", "INVITADO")
+            }
+        })
+
     else:
-        messages.warning(request, "No tienes permiso para modificar este usuario.")
-        return redirect("index") 
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
 
 #Asignaturas
 def asignaturasListar(request):
@@ -432,7 +451,7 @@ def asignaturasListar1(request):
         asignaturas_qs = Asignatura.objects.select_related('profesor__usuario', 'grados').all()
 
     elif rol == "PROF":
-        try:
+        try: 
             profesor = Profesor.objects.get(usuario=usuario)
             asignaturas_qs = Asignatura.objects.filter(profesor=profesor).select_related('profesor__usuario', 'grados')
         except Profesor.DoesNotExist:

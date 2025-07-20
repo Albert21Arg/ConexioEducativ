@@ -3,7 +3,7 @@ const listaAsignaturas = async () => {
         const response = await fetch('/asignaturasListar1/');
         const data = await response.json();
 
-        const usuarioRol = data.usuario.rol; // <-- Ahora sí accedemos al rol
+        const usuarioRol = data.usuario.rol;
 
         const tbody = document.querySelector('.bodyListaAsignaturas');
         tbody.innerHTML = '';
@@ -54,8 +54,9 @@ const listaAsignaturas = async () => {
         // ⬇️ Ocultar botones según rol DESPUÉS de insertar las filas
         if (usuarioRol === 'EST') {
             document.querySelectorAll('.btn-danger').forEach(btn => btn.remove());
-            document.querySelectorAll('.btn-info').forEach(btn => btn.remove());
+            
         } else if (usuarioRol === 'PROF') {
+            document.querySelectorAll('.btn-info').forEach(btn => btn.remove());
             document.querySelectorAll('.btn-danger').forEach(btn => btn.remove());
         }
 

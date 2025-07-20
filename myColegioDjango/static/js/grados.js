@@ -3,6 +3,8 @@ const listaGrados = async () => {
         const response = await fetch('/gradosListar1/');
         const data = await response.json();
 
+        const usuarioRol = data.usuario.rol;
+
         const tbody = document.querySelector('.bodyListaGrados'); // Asegúrate de declarar esto aquí
         tbody.innerHTML = ''; // Limpiar contenido previo si lo hay
 
@@ -12,6 +14,7 @@ const listaGrados = async () => {
                     <td>${index + 1}</td>
                     <td>${grados.nombre}</td>
                     <td>${grados.descripcion}</td>
+                    <td>${grados.profesorNombre}</td>
                     <td>
 
                          <a href="#" class="btn btn-sm bg-warning"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi btn-sm -eye" viewBox="0 0 16 16">
@@ -45,6 +48,15 @@ const listaGrados = async () => {
                 </tr>`;
             tbody.innerHTML += row;
         });
+        
+        // ⬇️ Ocultar botones según rol DESPUÉS de insertar las filas
+        if (usuarioRol === 'EST') {
+            document.querySelectorAll('.btn-danger').forEach(btn => btn.remove());
+            
+        } else if (usuarioRol === 'PROF') {
+            document.querySelectorAll('.btn-info').forEach(btn => btn.remove());
+            document.querySelectorAll('.btn-danger').forEach(btn => btn.remove());
+        }
 
         // Inicializar DataTables después de cargar los datos (una sola vez)
         if (!$.fn.DataTable.isDataTable('#datatableGrados')) {
