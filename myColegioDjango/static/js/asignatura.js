@@ -53,7 +53,8 @@ const listaAsignaturas = async () => {
 
         // ⬇️ Ocultar botones según rol DESPUÉS de insertar las filas
         if (usuarioRol === 'EST') {
-            document.querySelectorAll('.btn-danger').forEach(btn => btn.remove());
+            document.querySelectorAll('.btn-info').forEach(btn => btn.remove());
+            document.querySelectorAll('.btn-danger').forEach(btn => btn.remove())
             
         } else if (usuarioRol === 'PROF') {
             document.querySelectorAll('.btn-info').forEach(btn => btn.remove());

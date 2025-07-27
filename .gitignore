@@ -4,7 +4,6 @@ env/
 
 
 # Archivos de base de datos
-*.sqlite3
 
 # Archivos de configuración de usuario
 *.log
@@ -12,6 +11,8 @@ env/
 *.pyc
 *.pyo
 *.env
+.zip
+.rar
 
 
 # Archivos del sistema

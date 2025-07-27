@@ -44,6 +44,9 @@ urlpatterns = [
     path('actividadActualizar/<int:actividad_id>/', views.actividadActualizar, name='actividadActualizar'),
     path('actividadEliminar/<int:actividad_id>/', views.actividadEliminar, name='actividadEliminar'),
     
+    #Notas Actividades
+   
+
 
     #Estudiantes
     path('estudiantesListar/', views.estudiantesListar, name='estudiantesListar'),

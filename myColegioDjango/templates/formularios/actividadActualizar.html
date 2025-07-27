@@ -1,10 +1,67 @@
 {% extends 'base.html' %}
 
+{% block head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    .form-control {
+      border-radius: 12px;
+      padding: 10px 15px;
+    }
+    .form-label {
+      font-weight: 600;
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Actualizar Actividad</button>
-  </form>
-  
+<main class="d-flex justify-content-center align-items-center mt-5">
+  <section class="w-100" style="max-width: 700px;">
+    <div class="container">
+      <div class="card shadow-lg rounded-4">
+        <div class="card-header bg-success text-white text-center rounded-top-4 py-3">
+          <h4 class="m-0">Actualizar Actividad</h4>
+        </div>
+        <div class="card-body p-4">
+          <form method="post" novalidate>
+            {% csrf_token %}
+            {% for field in form %}
+              <div class="mb-4">
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                  <div class="form-text">{{ field.help_text }}</div>
+                {% endif %}
+                {% if field.errors %}
+                  <div class="text-danger small">{{ field.errors }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+            <div class="d-flex justify-content-between mt-4">
+              <a href="{% url 'asignaturasListar' %}" class="btn btn-outline-secondary px-4 ">Cancelar</a>
+              <button type="submit" class="btn btn-success px-4 px-4">Actualizar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+ <script>
+  flatpickr("#id_fecha_limite", {
+    enableTime: true,
+    time_24hr: false,
+    minuteIncrement: 1,
+    locale: "es",
+    altInput: true,
+    altFormat: "d/m/Y — h:i K",
+    dateFormat: "Y-m-d\\TH:i"
+  });
+</script>
 {% endblock %}

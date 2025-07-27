@@ -11,6 +11,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.http.response import JsonResponse
 import re
+from django.db import transaction
 from django.db.models import F, Value, CharField
 from django.db.models.functions import Concat
 
@@ -359,7 +360,7 @@ def gradosCrear(request):
             form = GradosForm(request.POST)
             if form.is_valid():
                 form.save()
-                return redirect('gradosListar')
+                return redirect('gruposCrear')
         else:
             form = GradosForm()
         return render(request, 'formularios/gruposCrear.html', {'form': form})
@@ -393,19 +394,49 @@ def gradosEliminar(request, grupo_id):
         messages.warning(request, "No tienes permiso para modificar este usuario.")
         return redirect("index")
     
-def gradosListar(request):
-    if request.session.get("logueado", {}).get("rol") == "ADM" or "PROF" :
-        grupos = Grados.objects.all()
-        return render(request, 'formularios/gruposListar.html', {'grupos': grupos})
-    else:
-        messages.warning(request, "No tienes permiso para modificar este usuario.")
-        return redirect("index")
-   
-def gradosListar1(request):
-    if request.session.get("logueado", {}).get("rol") in ["ADM", "PROF"]:
-        data = []
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from .models import Grados, Profesor, Usuario
 
-        for grupo in Grados.objects.all():
+def gradosListar(request):
+    sesion = request.session.get("logueado", {})
+    rol = sesion.get("rol")
+    usuario_id = sesion.get("id")
+
+    if rol == "ADM":
+        grupos = Grados.objects.all()
+    elif rol == "PROF":
+        try:
+            usuario = Usuario.objects.get(id=usuario_id)
+            profesor = Profesor.objects.get(usuario=usuario)
+            grupos = Grados.objects.filter(profesor=profesor)
+        except (Usuario.DoesNotExist, Profesor.DoesNotExist):
+            grupos = []
+            messages.warning(request, "No tienes grupos asignados.")
+    else:
+        messages.warning(request, "No tienes permiso para ver esta información.")
+        return redirect("index")
+
+    return render(request, 'formularios/gruposListar.html', {'grupos': grupos})
+
+def gradosListar1(request):
+    sesion = request.session.get("logueado", {})
+    rol = sesion.get("rol")
+    usuario_id = sesion.get("id")
+
+    if rol in ["ADM", "PROF"]:
+        if rol == "ADM":
+            grupos = Grados.objects.all()
+        elif rol == "PROF":
+            try:
+                usuario = Usuario.objects.get(id=usuario_id)
+                profesor = Profesor.objects.get(usuario=usuario)
+                grupos = Grados.objects.filter(profesor=profesor)
+            except (Usuario.DoesNotExist, Profesor.DoesNotExist):
+                grupos = []
+
+        data = []
+        for grupo in grupos:
             profesor_nombre = "Sin asignar"
             if grupo.profesor and grupo.profesor.usuario:
                 profesor_nombre = f"{grupo.profesor.usuario.nombre} {grupo.profesor.usuario.apellido}"
@@ -417,18 +448,14 @@ def gradosListar1(request):
                 'profesorNombre': profesor_nombre,
             })
 
-        # ← Aquí se agrega el rol actual para que el frontend lo use
         return JsonResponse({
             'grados': data,
             'usuario': {
-                'rol': request.session.get("logueado", {}).get("rol", "INVITADO")
+                'rol': rol
             }
         })
-
     else:
         return JsonResponse({'error': 'No autorizado'}, status=403)
-
-
 #Asignaturas
 def asignaturasListar(request):
     if request.session.get("logueado", {}).get("rol") in ["ADM", "PROF", "EST"]:
@@ -578,7 +605,7 @@ def actividadActualizar(request, actividad_id):
             form = ActividadForm(request.POST, instance=actividad)
             if form.is_valid():
                 form.save()
-                return redirect('actividadListar')
+                return redirect('asignaturasListar')
         else:
             form = ActividadForm(instance=actividad)
         return render(request, 'formularios/actividadActualizar.html', {'form': form})
@@ -600,6 +627,10 @@ def actividadesPorAsignatura(request, asignatura_id):
         'actividades': actividades
     })
    
+#Notas Actividades
+
+
+
 #Blogs
 def blogsCrear(request):
     if request.session.get("logueado", {}).get("rol")  in ["ADM", "PROF"]:

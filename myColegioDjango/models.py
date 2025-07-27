@@ -3,6 +3,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
 
 # Solo permitir texto
 sololetras = RegexValidator(
@@ -82,12 +83,12 @@ class Actividad(models.Model):
     def __str__(self):
         return self.nombre
     
+
 class Blog(models.Model):
     titulo = models.CharField(max_length=200)
     contenido = models.TextField()
     fechaCreacion = models.DateTimeField(auto_now_add=True)
     actividad = models.ForeignKey(Actividad, on_delete=models.SET_NULL, null=True, blank=True, related_name="blogs")
     grados = models.ForeignKey(Grados, on_delete=models.SET_NULL, null=True, blank=True, related_name="blogs")
-
     def __str__(self):
         return self.titulo

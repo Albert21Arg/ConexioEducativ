@@ -38,8 +38,9 @@
                         </table>
                         <div class="d-flex justify-content-between mt-3">
                           <a href="{% url 'index' %}" class="btn btn-outline-secondary px-4">Atras</a>
+                          {% if request.session.logueado.rol == 'ADM' %}
                           <a href="{% url 'asignaturasCrear' %}" class="btn btn-success">Crear nueva asignatura</a>
-                          
+                          {% endif %}
                         </div>
                     </div>
                 </div>
