@@ -1,5 +1,52 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
 
 {% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Calificar actividad {{ actividad.nombre }}</h2>
 
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label for="porcentaje_general" class="form-label fw-bold">Porcentaje general (%)</label>
+            <input type="number" step="0.01" min="5" max="100" name="porcentaje_general" class="form-control"
+                   value="{{ request.POST.porcentaje_general }}" required>
+        </div>
+
+        <table class="table table-striped mt-4">
+            <thead>
+                <tr>
+                    <th>Estudiante</th>
+                    <th>Nota actual</th>
+                    <th>Porcentaje actual</th>
+                    <th>Modificar nota</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for estudiante in estudiantes %}
+                {% with nota=notas_actuales|get_item:estudiante.id %}
+                <tr>
+                    <td>{{ estudiante.usuario.nombre }} {{ estudiante.usuario.apellido }}</td>
+                    <td class="{% if nota and nota.valor > 3.5 %}text-success fw-bold{% else %}text-danger fw-bold{% endif %}">
+                        {% if nota %}{{ nota.valor }}{% else %}0{% endif %}
+                    </td>
+                    <td class="fw-bold">
+                        {% if nota %}{{ nota.porcentaje }} % {% else %}0{% endif %}
+                    </td>
+                    <td>
+                        <input type="number" name="nota_{{ estudiante.id }}" step="0.01" min="0" max="5" class="form-control"
+                               value="{% if nota %}{{ nota.valor }}{% endif %}">
+                    </td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-success">Guardar notas</button>
+        </div>
+    </form>
+</div>
 {% endblock %}

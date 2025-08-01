@@ -79,3 +79,15 @@ class BlogAdmin(admin.ModelAdmin):
     list_display = ('id' ,'titulo', 'contenido', 'fechaCreacion')
     search_fields = ('titulo', 'contenido')
     list_filter = ('fechaCreacion',)
+    
+@admin.register(Nota)
+class NotaActividadAdmin(admin.ModelAdmin):
+    list_display = ('id', 'estudiante_nombre', 'actividad_nombre', 'valor', 'porcentaje')
+
+    def estudiante_nombre(self, obj):
+        return f"{obj.estudiante.usuario.nombre} {obj.estudiante.usuario.apellido}"
+    estudiante_nombre.short_description = "Estudiante"
+
+    def actividad_nombre(self, obj):
+        return obj.actividad.nombre
+    actividad_nombre.short_description = "Actividad"

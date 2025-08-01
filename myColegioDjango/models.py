@@ -84,6 +84,19 @@ class Actividad(models.Model):
         return self.nombre
     
 
+    
+class Nota(models.Model):
+    actividad = models.ForeignKey(Actividad, on_delete=models.CASCADE)
+    porcentaje = models.DecimalField(max_digits=5, decimal_places=0)
+    estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
+    valor = models.DecimalField(max_digits=5, decimal_places=1)
+
+    class Meta:
+        unique_together = ('actividad', 'estudiante')
+
+    def __str__(self):
+        return f"{self.estudiante} - {self.actividad} - {self.valor}"
+
 class Blog(models.Model):
     titulo = models.CharField(max_length=200)
     contenido = models.TextField()

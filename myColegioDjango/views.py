@@ -626,8 +626,77 @@ def actividadesPorAsignatura(request, asignatura_id):
         'asignatura': asignatura,
         'actividades': actividades
     })
-   
-#Notas Actividades
+
+#Notas de Actividades
+from django.contrib import messages
+
+def crearNota(request, actividad_id):
+    actividad = get_object_or_404(Actividad, id=actividad_id)
+    estudiantes = actividad.asignatura.grados.estudiantes.all()
+    errores = False
+
+    if request.method == 'POST':
+        porcentaje_general = request.POST.get('porcentaje_general')
+
+        try:
+            porcentaje_general = float(porcentaje_general)
+            if not (5 <= porcentaje_general <= 100):
+                messages.error(request, "El porcentaje general debe estar entre 5 y 100.")
+                errores = True
+        except (ValueError, TypeError):
+            messages.error(request, "Porcentaje general inválido.")
+            errores = True
+
+        if not errores:
+            for estudiante in estudiantes:
+                nota_key = f'nota_{estudiante.id}'
+                nota_valor = request.POST.get(nota_key)
+
+                if nota_valor is not None and nota_valor.strip() != "":
+                    try:
+                        nota_valor = float(nota_valor)
+                        if 0 <= nota_valor <= 5:
+                            nota_obj, created = Nota.objects.get_or_create(
+                                actividad=actividad,
+                                estudiante=estudiante,
+                                defaults={'valor': nota_valor, 'porcentaje': porcentaje_general}
+                            )
+                            if not created:
+                                nota_obj.valor = nota_valor
+                                nota_obj.porcentaje = porcentaje_general
+                                nota_obj.save()
+                        else:
+                            errores = True
+                            messages.error(request, f"La nota de {estudiante.usuario.nombre} debe estar entre 0 y 5.")
+                    except ValueError:
+                        errores = True
+                        messages.error(request, f"Nota inválida para {estudiante.usuario.nombre}.")
+
+            if not errores:
+                messages.success(request, "Notas guardadas exitosamente.")
+
+        # Al final del POST, renderiza la misma vista
+        notas_actuales = {nota.estudiante.id: nota for nota in Nota.objects.filter(actividad=actividad)}
+
+        return render(request, 'formularios/notasCrear.html', {
+            'actividad': actividad,
+            'estudiantes': estudiantes,
+            'notas_actuales': notas_actuales,
+        })
+
+    # Prepara notas existentes para el template
+    notas_actuales = {
+        nota.estudiante.id: nota
+        for nota in Nota.objects.filter(actividad=actividad)
+    }
+
+    context = {
+        'actividad': actividad,
+        'estudiantes': estudiantes,
+        'notas_actuales': notas_actuales,
+    }
+    return render(request, 'formularios/notasCrear.html', context)
+
 
 
 
